@@ -91,7 +91,6 @@ public class Phase_congruency implements PlugInFilter{
         gd.setInsets(1, 16, 1);
         gd.addCheckboxGroup(1, 6, outsV, outsB);
         gd.addMessage("PC: Phase Congruency");
-        gd.addMessage("F: Real component");
         
         gd.showDialog();
         if (gd.wasCanceled())
