@@ -17,6 +17,9 @@ información adicional se puede revisar:
 Para instalar el plugin se puede revisar en la ayuda de [ImageJ](https://imagejdocu.tudor.lu/howto/plugins/how_to_install_a_plugin)
 
 ## Parámetros del plugin
+
+![interfaz](https://github.com/carloskl12/phase_Congruency/blob/master/menusPC.png)
+
 Consta de tres tipos de entradas, primero los parámetros básicos 
 indicando entre paréntesis su valor por defecto:
  - **Scales** (4), hace referencia al 
