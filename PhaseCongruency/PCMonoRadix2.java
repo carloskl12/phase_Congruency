@@ -29,6 +29,9 @@ public class PCMonoRadix2 {
     public static final int THM_CUSTOM_VALUE=2;
     public static final int THM_WEIBULL=3;
     public static final String [] THM_METHODS={"Median","Mode","Custom","Weibull"};
+    public static final int PCQ_ABS=0;
+    public static final int PCQ_EXPONENTIAL=1;
+    public static final String [] PCQ_FUNCTION={"Abs","Exponential"};
     int nScale = 4;
     int minWaveLength = 3;
     double mult = 2.1;
@@ -37,38 +40,43 @@ public class PCMonoRadix2 {
     double cutOff = 0.5;
     int g = 10;
     double alphaGain = 1.5;
-    int noiseThMethod = 0;//Noise threshold method
-    double value=3;
-
+    int noiseThMethod = THM_MEDIAN_RAYLEIGH;//Noise threshold method
+    double noiseValue=3;
+    int pcQuantification= PCQ_ABS;
     public boolean showNoiseTreshold=true;
-    public double[][] PC;
-    public double[][] Ph;//Fase
-    public double[][] imgF;//Componente real
-    public double[][] imgH;//Transformada de hilbert
-    public double[][] Or;//Orientación
-    public double[][] E;//Energía
-    public double[][] W;//Dispersión de frecuencias
+    public double[][] PC; //Congruencia de fase
+    public double[][] Ph; //Fase
+    public double[][] imgF; //Componente real
+    public double[][] imgH; //Transformada de hilbert
+    public double[][] Or; //Orientación
+    public double[][] E;  //Energía
+    public double[][] W;  //Dispersión de frecuencias
+    public double[][] PCk;//Esquinas
     Radix2Processor im;
     
     /*
     * La creación de la clase es con el fin de ajustar parámetros
     * del filtro
     */
-    public PCMonoRadix2(int nScale,int minWaveLength,double mult,double sigmaOnf,double k,double cutOff,int g,
-    		double deviationGain,int nthMethod , double value)
-    {
+
+    public PCMonoRadix2(int nScale,int minWaveLength,double mult,double sigmaOnf,
+            int pcqFunction,double alpha, double cutOff,int g,
+    		int nthMethod , double value){
         this.nScale=nScale;
         this.minWaveLength=minWaveLength;
         this.mult=mult;
         this.sigmaOnf=sigmaOnf;
-        this.k=k;
+        
+        this.pcQuantification=pcqFunction;
+        this.alphaGain=alpha;
+        
         this.cutOff=cutOff;
         this.g=g;
-        this.alphaGain=deviationGain;
+        
         this.noiseThMethod=nthMethod;
-        this.value=value;
+        this.noiseValue=value;
+        this.k=value;
     }
-
     public PCMonoRadix2(){
         //Deja los valores por defecto.
     }
@@ -89,7 +97,7 @@ public class PCMonoRadix2 {
             ht = im.getHeight();
             wd = ht;
         }
-        IJ.log("maxValue: "+ip.getMax());
+        //IJ.log("maxValue: "+ip.getMax());
         double tau=0;//**
         double[][] sumAn = new double[ht][wd];//Suma de amplitudes en diferentes componentes
         double[][] sumh1 = new double[ht][wd];//Suma componentes h1 (real) H(x) parte real
@@ -171,6 +179,7 @@ public class PCMonoRadix2 {
             fft.real[0][0]=0;
             fft.imag[0][0]=0;
             fft.ifftComplex();
+            
 
             // Acumula los resultados
             for (i = 0; i < ht; i++)
@@ -206,11 +215,11 @@ public class PCMonoRadix2 {
                     }
                     Arrays.sort(tmp);// Ordena
                     int middle = tmp.length / 2;
-                    IJ.log("middle: "+middle);
-                    IJ.log("middle value: "+tmp[middle]);
+                    //IJ.log("middle: "+middle);
+                    //IJ.log("middle value: "+tmp[middle]);
                     double mediana = tmp.length % 2 == 1 ? tmp[middle] : (tmp[middle - 1] + tmp[middle]) / 2.0;
                     tau = mediana / Math.sqrt(Math.log(4));//Logaritmo natural
-                    IJ.log("tau: "+tau);
+                    //IJ.log("tau: "+tau);
                 } else if (noiseThMethod == THM_MODE_RAYLEIGH)
                     tau = this.rayleighmode(sumAn,50);// Halla la moda.
             }
@@ -230,13 +239,14 @@ public class PCMonoRadix2 {
         }
         
         PC = new double[htOrig][wdOrig];
+        //PCk=new double[htOrig][wdOrig];//Esquinas
         imgF=sumf;//Componente real F
         imgH=new double[htOrig][wdOrig];//Transformada de hilbert H
         E= new double[htOrig][wdOrig];//Energía
         Ph = new double[htOrig][wdOrig]; //ángulo de fase
         Or=new double[htOrig][wdOrig]; //Orientación o dirección de gradiente
         W=new double[htOrig][wdOrig];//Ponderación de la congruencia de fase
-
+        
         //Calcula la energía para estimar el umbral de ruido
         for (i = 0; i < htOrig; i++)
             for (j = 0; j < wdOrig; j++)
@@ -254,10 +264,10 @@ public class PCMonoRadix2 {
         */
         double t=0;
         if (noiseThMethod == THM_CUSTOM_VALUE)
-            t = value;
+            t = noiseValue;
         else if(noiseThMethod==THM_MEDIAN_RAYLEIGH || noiseThMethod==THM_MODE_RAYLEIGH  )
         {
-            IJ.log("taub value:"+tau);
+            //IJ.log("taub value:"+tau);
             double totalTau = tau * (1 - Math.pow(1 / mult, nScale)) / (1 - (1 / mult));
             t = totalTau * (Math.sqrt(Math.PI / 2) + k * Math.sqrt((4 - Math.PI) / 2));
         }else if(noiseThMethod ==THM_WEIBULL)
@@ -274,12 +284,12 @@ public class PCMonoRadix2 {
                     tmp[off + j] = E[i][j];
             }
             double moda=rayleighmode(tmp,256);
-            IJ.log("Factor p:"+value+ "  Moda:"+moda);
-            t = moda*value;//Calcula el umbral
+            //IJ.log("Factor p:"+value+ "  Moda:"+moda);
+            t = moda*noiseValue;//Calcula el umbral
         }
         // t es el valor del radio del círculo de ruido
         
-        IJ.log("Noise Threshold: " + t);
+        //IJ.log("Noise Threshold: " + t);
         // Cuantificación final de fc.
         for (i = 0; i < htOrig; i++)
             for (j = 0; j < wdOrig; j++)
@@ -295,18 +305,49 @@ public class PCMonoRadix2 {
                 if(or<0)
                     or += Math.PI ;
                 Or[i][j]=or;//Orientación
-
+                
                  double energy=E[i][j];
                 // 1 - alfa*delta(x)
-                double tmpx = Math.acos(energy / (sumAn[i][j] + epsilon));
-                double tmp1 = 1 - alphaGain * tmpx;
+                double deltaX = Math.acos(energy / (sumAn[i][j] + epsilon));
                 
-                if(tmp1 < 0)
-                    tmp1 =0;
+                double pcqValue = 0;
+                switch(this.pcQuantification){
+                    case PCQ_ABS:
+                        pcqValue = 1 - alphaGain * deltaX;
+                        break;
+                    case PCQ_EXPONENTIAL:
+                        pcqValue = Math.exp(-alphaGain*Math.abs(deltaX));
+                }
+                    
+                
+                
+                if(pcqValue < 0)
+                    pcqValue =0;
                 double tmp2 = energy - t;
                 if(tmp2<0)
                     tmp2 = 0;
-                PC[i][j] = weight * tmp1 * tmp2 / (energy + epsilon);
+                PC[i][j] = weight * pcqValue * tmp2 / (energy + epsilon);
+                //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                //Deteccion de Esquinas
+                // Se hallan las magnitudes de los gradientes direccionales
+                // de la congruencia de fase
+                //double ix=PC[i][j]*Math.cos(Or[i][j]);
+                //double iy=PC[i][j]*Math.sin(Or[i][j]);
+                // The gradient matrix covariance 
+                //G= [ Ix^2  Ix*Iy
+                //     Ix*Iy  Iy^2]
+                // permite calcular
+                // R= det(G)-k*(tr(G))^2
+                // det(G)=M*m
+                // tr(G)= M+m
+                //double a=ix*ix;
+                //double b=2*ix*iy;
+                //double c=iy*iy;
+                //double sq=Math.sqrt(b*b+(a-c)*(a-c));
+                //double lambda1=0.5*(c+a+sq);
+                //double lambda2=0.5*(c+a-sq);
+                //PCk[i][j]=lambda1*lambda2-0.04*(lambda1+lambda2)*(lambda1+lambda2);
+                //PCk[i][j]=iy+ix;
             }
 
     }
@@ -341,7 +382,7 @@ public class PCMonoRadix2 {
                 ind = i;
             }
         }
-        IJ.log("Indice: " + ind);
+        //IJ.log("Indice: " + ind);
         return inc * (2 * ind - 1) / 2;
     }
 

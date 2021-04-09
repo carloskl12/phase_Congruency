@@ -1,24 +1,56 @@
 /**
- * Este archivo contiene la implementación de la Congruencia de Fase
- * @author Carlos Antonio Jacanamejoy Jamioy
- */
+* Phase_congruency.java
+* Created on 12 December 2019, updated on 1 April 2021 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* This plug-in is inspired on Matlab code contibuted by Peter Kovesi 
+* (https://peterkovesi.com/matlabfns/PhaseCongruency/phasecongmono.m)
+*
+* Function: finds the phase congruency of the input image by
+* monogenic filters.
+* 
+* Input: any type of image or stack. The image is not modified.
+* Output: One filtered float images or stacks
+*
+* Copyright (c) 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* This plugin is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 3
+* as published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this plugin; if not, write to the Free Software
+* Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
 import PhaseCongruency.PCMonoRadix2;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.plugin.filter.PlugInFilter;
 import static ij.plugin.filter.PlugInFilter.DOES_ALL;
 import static ij.plugin.filter.PlugInFilter.DONE;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
+import java.awt.AWTEvent;
+import java.awt.Choice;
+import java.awt.TextField;
+import java.util.Vector;
 
 /*
-This implementation is inspired on Matlab code
- contibuted by Peter Kovesi 
- (https://peterkovesi.com/matlabfns/PhaseCongruency/phasecongmono.m)
+This implementation 
 */
-public class Phase_congruency implements PlugInFilter{
+public class Phase_congruency implements PlugInFilter,DialogListener{
+    String helpUrl ="https://github.com/carloskl12/phase_Congruency";
     protected ImagePlus imp;
     private int width;
     private int height;
@@ -34,12 +66,15 @@ public class Phase_congruency implements PlugInFilter{
     int minWaveLength=3;
     double mult=2.1;
     double sigmaOnf=0.55;
-    double k=3.;
+    //double k=3.;
     double cutOff=0.5;
     int g=10;
     double deviationGain=1.5;
-    int noiseMethod=-1;
+    int noiseMethod=0;
     public double value=3;
+    
+    int pcQuantification=0;
+    
     boolean outPC=true;
     boolean outF=false;
     boolean outH=false;
@@ -58,6 +93,7 @@ public class Phase_congruency implements PlugInFilter{
     double tau=0;
     double phi=3;
     
+    
     @Override
     public int setup(String arg,ImagePlus imp) 
     {
@@ -67,30 +103,43 @@ public class Phase_congruency implements PlugInFilter{
             return DONE;
         }
         //Imagenes de salida que se pueden mostrar
-        String [] outsV={"PC","F","H","E","Ph","Or"};
+        String [] outsV={"Phase Congruency","Enegry","Real Component","Phase",
+            "Imaginary Component","Orientation"};
         boolean [] outsB={true,false,false,false,false,false};
-        GenericDialog gd=new GenericDialog("Phase congruency");
+        GenericDialog gd=new GenericDialog("Monogenic Phase Congruency");
+        gd.addMessage("Global parameters");
         gd.addNumericField("Scales:", nScale, 0);
         gd.addToSameRow();
-        gd.addNumericField("Lenght_edge:", minWaveLength, 0);
-        gd.addNumericField("Mult:", mult, 2);
+        gd.addNumericField("Edge_width*2:", minWaveLength, 0);
+        gd.addNumericField("Scale_factor:", mult, 2);
         gd.addToSameRow();
         gd.addNumericField("Sigma_Onf:", sigmaOnf, 2);
-        gd.addNumericField("k:", k, 2);
-        gd.addToSameRow();
-        gd.addNumericField("Cut_Off:", cutOff, 2);
-        gd.addNumericField("Gain:", g, 0);
+        
+        gd.addMessage("Phase Congruency Quantification");
+        gd.addChoice("Function:",PCMonoRadix2.PCQ_FUNCTION, PCMonoRadix2.PCQ_FUNCTION[0]);
         gd.addToSameRow();
         gd.addNumericField("Alpha:", deviationGain, 2);
-        gd.addChoice("Threshold:", PCMonoRadix2.THM_METHODS, PCMonoRadix2.THM_METHODS[0]);
+        
+        gd.addMessage("Fequency distribution wheighting function ");
+        gd.addNumericField("Cut_Off:", cutOff, 2);
         gd.addToSameRow();
-        gd.addNumericField("Value:", value, 0);
+        gd.addNumericField("Gain:", g, 0);
+           
+
+        gd.addMessage("Noise threshold estimator");
+        gd.addChoice("Method:", PCMonoRadix2.THM_METHODS, PCMonoRadix2.THM_METHODS[0]);
+        gd.addToSameRow();
+        gd.addNumericField("Value:", value, 2);
+        //gd.addToSameRow();
+        //gd.addNumericField("k:", k, 2);
         
         gd.addMessage("Outputs");
         //Configura márgenes
         gd.setInsets(1, 16, 1);
-        gd.addCheckboxGroup(1, 6, outsV, outsB);
-        gd.addMessage("PC: Phase Congruency");
+        gd.addCheckboxGroup(4, 2, outsV, outsB);
+        gd.addHelp(helpUrl);
+        
+        gd.addDialogListener(this);
         
         gd.showDialog();
         if (gd.wasCanceled())
@@ -100,24 +149,31 @@ public class Phase_congruency implements PlugInFilter{
         minWaveLength=(int) gd.getNextNumber();
         mult=gd.getNextNumber();
         sigmaOnf=gd.getNextNumber();
-        k=gd.getNextNumber();
-        cutOff=gd.getNextNumber();
-        g=(int)gd.getNextNumber();
+        
+        pcQuantification=(int) gd.getNextChoiceIndex();
         deviationGain=gd.getNextNumber();
+        
+        // Weight ponderation parameters
+        cutOff=gd.getNextNumber();
+        g=(int)gd.getNextNumber();    
+        
         noiseMethod=(int) gd.getNextChoiceIndex();
         value=gd.getNextNumber();
+        //k=gd.getNextNumber();
+        
         outPC=gd.getNextBoolean();
-        outF=gd.getNextBoolean();
-        outH=gd.getNextBoolean();
         outE=gd.getNextBoolean();
+        outF=gd.getNextBoolean();
         outPh=gd.getNextBoolean();
+        outH=gd.getNextBoolean();
         outOr=gd.getNextBoolean();
+        
         this.imp=imp;
         if (imp==null){
             IJ.showMessage("Error","Image is required");
             return DONE;
         }
-        IJ.log("Factor: "+value);
+        //IJ.log("Factor: "+value);
         width=imp.getWidth();
         height=imp.getHeight();
         titulo=imp.getTitle();
@@ -153,8 +209,12 @@ public class Phase_congruency implements PlugInFilter{
     @Override
     public void run(ImageProcessor ip)
     {
-        pc=new PCMonoRadix2(nScale,minWaveLength,mult,sigmaOnf,k,
-        		cutOff,g,deviationGain,noiseMethod,value);
+        //pc=new PCMonoRadix2(nScale,minWaveLength,mult,sigmaOnf,k,
+        //		cutOff,g,deviationGain,noiseMethod,value);
+        pc=new PCMonoRadix2(nScale,minWaveLength,mult,sigmaOnf,
+                pcQuantification, deviationGain,
+                cutOff,g,
+                noiseMethod,value);
         if(imp.getStackSize()>1)
             pc.showNoiseTreshold=false;
         for (int i=1;i<=imp.getStackSize();i++)
@@ -175,6 +235,7 @@ public class Phase_congruency implements PlugInFilter{
                 addResult(stackPh,pc.Ph);
             if(outOr)
                 addResult(stackOr,pc.Or);
+
         }
         if(outPC)
         {
@@ -206,6 +267,7 @@ public class Phase_congruency implements PlugInFilter{
             ImagePlus imPC=new ImagePlus(titulo+"_Or"+extension,stackOr);
             imPC.show();
         }
+
         IJ.showProgress(1.0);
     }
     /*
@@ -236,4 +298,70 @@ public class Phase_congruency implements PlugInFilter{
         IJ.showMessage("Phase_Congruency",
         "Implementación de Phase_Congruency basada el la propuesta de Peter Kovesi");
     }
+
+    @Override
+    public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+        Vector numeric = gd.getNumericFields();
+        
+        Vector choices = gd.getChoices();
+        
+        //nScale (0)
+        //minWaveLength (1)
+        // mult (2)
+        // sigmaOnf (3)
+        // Alpha (4)
+        // cutOff (5)
+        // g (6)
+        // value (7)
+        
+        // pcQuantification (0)
+        // noiseMethod  (1) 
+        
+        TextField tf;
+        //String theText;
+        // Verifica la función de cuantificación si ha cambiado
+        Choice thisChoice = (Choice)(choices.elementAt(0));
+	int index = thisChoice.getSelectedIndex();
+        if(index != this.pcQuantification){
+            this.pcQuantification=index;
+            tf = (TextField)numeric.elementAt(4);
+            //double alpha = gd.parseDouble(tf.getText());
+            switch(this.pcQuantification){
+                case PCMonoRadix2.PCQ_EXPONENTIAL:
+                    this.deviationGain=4;
+                    break;
+                case PCMonoRadix2.PCQ_ABS:
+                    this.deviationGain=1.5;
+                    break;
+            }
+            tf.setText(""+this.deviationGain);
+        }
+        
+        //Verifica el método de estimación de ruido
+        thisChoice = (Choice)(choices.elementAt(1));
+	index = thisChoice.getSelectedIndex();
+        if(index != this.noiseMethod){
+            this.noiseMethod=index;
+            tf = (TextField)numeric.elementAt(7);
+            //double alpha = gd.parseDouble(tf.getText());
+            switch(this.noiseMethod){
+                case PCMonoRadix2.THM_MEDIAN_RAYLEIGH:
+                    this.value=3;
+                    break;
+                case PCMonoRadix2.THM_MODE_RAYLEIGH:
+                    this.value=3;
+                    break;
+                case PCMonoRadix2.THM_CUSTOM_VALUE:
+                    this.value=0.1;
+                    break;
+                case PCMonoRadix2.THM_WEIBULL:
+                    this.value=3;
+                    break;
+            }
+            tf.setText(""+this.value);
+        }
+
+        return true;
+    }
+
 }

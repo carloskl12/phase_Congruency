@@ -1,5 +1,28 @@
 package PhaseCongruency;
 import ij.IJ;
+/**
+* LowPassFilter.java
+* Created on 12 December 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* Copyright (c) 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* This code is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 3
+* as published by the Free Software Foundation.
+*
+* This code is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this plugin; if not, write to the Free Software
+* Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
 
 public class LowPassFilter implements Cloneable {
 

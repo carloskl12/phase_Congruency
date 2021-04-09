@@ -7,17 +7,35 @@ import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 
 /**
- * Clase que se crea con la finalidad de encapsular los métodos comunes sobre
- * plugins que se trabajan en base a la FFT_Radix2, que es sobre imágenes
- * cuadradas, y por tanto se deben realizar ajustes en imágenes no cuadradas
- *
- * La función adjustRadix2,está basada en la función filter en el código de la
- * clase FFTFilter, del paquete ij.plugin.filter.
- * https://imagej.nih.gov/ij/developer/source/
- *
- * @author Carlos Jacanamejoy Grupo de Investigación Naturatu Universidad de
- * Ibague Junio de 2016
- */
+* Radix2Processor.java
+* Created on 12 December 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* Class that is created with the intention of encapsulating the common 
+* methods on add-ons that are processed based on the FFT_Radix2, which 
+* is on square images, and therefore adjustments must be made to 
+* non-square images. This class is inspired on FFTFilter code 
+* available on https://imagej.nih.gov/ij/developer/source/.
+*
+* Copyright (c) 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* This code is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 3
+* as published by the Free Software Foundation.
+*
+* This code is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this plugin; if not, write to the Free Software
+* Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 public class Radix2Processor extends FloatProcessor {
 
     protected boolean cuadradaP2; //Si originalmente la imagen es cuadradaP2
@@ -43,7 +61,7 @@ public class Radix2Processor extends FloatProcessor {
         } else {
             this.originalHeight = this.height;
             this.originalWidth = this.width;
-            this.cuadradaP2 = esCuadradaP2(this.width, this.height);
+            this.cuadradaP2 = isPower2(this.width, this.height);
             // Para ahorrar tiempo de ejecución en imágenes grandes
             // se reajusta el factor a 1
             if(Math.max(this.height, this.width)>512)
@@ -51,7 +69,7 @@ public class Radix2Processor extends FloatProcessor {
         }
     }
 
-    public boolean esCuadradaP2(int wd, int ht) {
+    public boolean isPower2(int wd, int ht) {
         int i = 2;
         while (i < wd) {
             i <<= 1;
@@ -62,11 +80,11 @@ public class Radix2Processor extends FloatProcessor {
     /**
      * Ajusta la imagen a un caudrado usando tileMirror
      *
-     * @return: el processor ajustado
+     * @return Radix2Processor
      *
      */
     public Radix2Processor adjustRadix2() {
-        if (esCuadradaP2(this.width, this.height)) {
+        if (isPower2(this.width, this.height)) {
             return this;//NO se hizo ajuste porque ya es cuadrada
         }
         Rectangle roiRect = this.getRoi();
@@ -95,7 +113,7 @@ public class Radix2Processor extends FloatProcessor {
 
     public Radix2Processor originalImage() {
         if (width != originalWidth && height != originalHeight
-                && this.esCuadradaP2(width, height)) {
+                && this.isPower2(width, height)) {
             //Extrae la imagen original
             ImageProcessor ipR;
             int i = 2;
@@ -116,79 +134,109 @@ public class Radix2Processor extends FloatProcessor {
             return ipNew;
         }
         if (width != originalWidth && height != originalHeight
-                && !this.esCuadradaP2(width, height)) {
+                && !this.isPower2(width, height)) {
             IJ.error("Hay un error en la gestion de las dimensiones de la imagen");
         }
         return this;
     }
 
     /**
-     *
-     * @param width: nuevo ancho
-     * @param height: nuevo alto
+     * @param bigWidth: nuevo ancho
+     * @param bigHeight: nuevo alto
      * @param x: coordenada x de inicio de la imagen
      * @param y: coordenada y de inicio de la imagen
-     * @return: retorna la imagen con el tileMirror
-     */
-    private Radix2Processor tileMirror(int width, int height, int x, int y) {
-        if (x < 0 || x > (width - 1) || y < 0 || y > (height - 1)) {
-            IJ.error("Image to be tiled is out of bounds.");
-            return null;
-        }
-
-        ImageProcessor ipout = this.createProcessor(width, height);
+     * @return Radix2Processor : retorna la imagen con el tileMirror
+    */
+    public Radix2Processor tileMirror(int bigWidth, int bigHeight, int x, int y){
+        ImageProcessor ipout = this.createProcessor(bigWidth, bigHeight);
         //Crea una copia del actual ip
-        ImageProcessor ip2 = this.crop();
-        int w2 = ip2.getWidth();
-        int h2 = ip2.getHeight();
+        //ImageProcessor ip2 = this.crop();
+        int w2 = this.getWidth();
+        int h2 = this.getHeight();
 
         // how many times does ip2 fit into ipout?
-        int i1 = (int) Math.ceil(x / (double) w2);
-        int i2 = (int) Math.ceil((width - x) / (double) w2);
-        int j1 = (int) Math.ceil(y / (double) h2);
-        int j2 = (int) Math.ceil((height - y) / (double) h2);
+        int hvLeft = x ;
+        int hvRight = x+w2;
+        int vvUp = y;
         
-        // tile
-        if ((i1 % 2) > 0.5) {
-            ip2.flipHorizontal();
-        }
-        if ((j1 % 2) > 0.5) {
-            ip2.flipVertical();
-        }
-
-        for (int i = -i1; i < i2; i += 2) {
-            for (int j = -j1; j < j2; j += 2) {
-                ipout.insert(ip2, x - i * w2, y - j * h2);
+        
+        //IJ.log("TileMirror New");
+        int a, offset;
+        //----------------------------------------------------------------------
+        //The image changed
+        float[] pixels = (float[]) ipout.getPixels();//new float[bigHeight*bigWidth];
+        //Imagen original
+        float[] pixelsR = (float[]) this.getPixels();
+        //Copy the pixels in the middle of the enlarged image
+        for (a = y = 0; y < h2; y++) {
+            offset = (y + vvUp) * bigWidth + hvLeft;
+            for (x = 0; x < w2; x++) {
+                pixels[offset + x] = pixelsR[a++];
             }
         }
 
-        ip2.flipHorizontal();
-        for (int i = -i1 + 1; i < i2; i += 2) {
-            for (int j = -j1; j < j2; j += 2) {
-                ipout.insert(ip2, x - i * w2, y - j * h2);
-            }
-        }
+        // Si el ancho es impar, el lado izquierdo a reflejar es el mas grande
+        // Si el alto es impar, el lado superior a reflejar es el mas grande
+        // Esto se debe al redondeo utilizado para definir las coordenadas x,y
+        // donde se inicia a copiar la imagen original.
+        boolean widthOdd = width%2==1;//Ancho impar
+        boolean heightOdd = height%2==1;//Alto impar
 
-        ip2.flipVertical();
-        for (int i = -i1 + 1; i < i2; i += 2) {
-            for (int j = -j1 + 1; j < j2; j += 2) {
-                ipout.insert(ip2, x - i * w2, y - j * h2);
+        //----------------------------------------------------------------------
+        //Duplicate the pixels of the upper and lower parts of the image
+        int yUpCopy, yUpNew, yDownCopy, yDownNew;
+        yUpCopy=vvUp;
+        yUpNew=yUpCopy-1;
+        yDownCopy=yUpNew+height;
+        yDownNew=yUpCopy+height;
+        int i;
+        for(i=0;i<vvUp;i++){
+            if(heightOdd && i==vvUp-1){
+                //Solo copia en la parte superior
+                for(x=hvLeft;x<hvRight;x++)
+                    pixels[yUpNew*bigWidth+x]=pixels[yUpCopy*bigWidth+x];
+            }else{
+                for(x=hvLeft;x<hvRight;x++){
+                    pixels[yUpNew*bigWidth+x]=pixels[yUpCopy*bigWidth+x];
+                    pixels[yDownNew*bigWidth+x]=pixels[yDownCopy*bigWidth+x];
+                }
+                yUpNew--;
+                yUpCopy++;
+                yDownNew++;
+                yDownCopy--;
+            }
+            
+        }
+        int xLeftCopy, xLeftNew, xRightCopy,xRightNew;
+        xLeftCopy=hvLeft;
+        xLeftNew=hvLeft-1;
+        xRightCopy=xLeftNew+width;
+        xRightNew=xLeftCopy+width;
+        
+        for(i=0;i<hvLeft;i++){
+            if(widthOdd && i ==hvLeft-1){
+                for(y=0;y<bigHeight;y++)
+                    pixels[y*bigWidth+xLeftNew]=pixels[y*bigWidth+xLeftCopy];
+            }else{
+                for(y=0;y<bigHeight;y++){
+                    pixels[y*bigWidth+xLeftNew]=pixels[y*bigWidth+xLeftCopy];
+                    pixels[y*bigWidth+xRightNew]=pixels[y*bigWidth+xRightCopy];
+                }
+                xLeftNew--;
+                xLeftCopy++;
+                xRightNew++;
+                xRightCopy--;
+                    
             }
         }
-
-        ip2.flipHorizontal();
-        for (int i = -i1; i < i2; i += 2) {
-            for (int j = -j1 + 1; j < j2; j += 2) {
-                ipout.insert(ip2, x - i * w2, y - j * h2);
-            }
-        }
+ 
         Radix2Processor ipNew = new Radix2Processor(ipout);
         ipNew.originalHeight = h2;
         ipNew.originalWidth = w2;
-        ipNew.cuadradaP2 = esCuadradaP2(w2, h2);
+        ipNew.cuadradaP2 = isPower2(w2, h2);
         return ipNew;
     }
-
+    
     public int getOriginalWidth() {
         return originalWidth;
     }

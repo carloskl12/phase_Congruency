@@ -4,13 +4,34 @@ import ij.IJ;
 import ij.process.ImageProcessor;
 
 /**
- *
- * @author Carlos Jacanamejoy Esta clase contiene como implementación principal
- * la transformada rápida de fourier, del codigo orignal fft.c Douglas L. Jones
- * University of Illinois at Urbana-Champaign January 19, 1992
- * http://cnx.rice.edu/content/m12016/latest/
-***************************************************************
- */
+* FFTRadix2.java
+* Created on 12 December 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* This class implements the FFT Radix-2 transform, 
+* inspired on the original code fft.c. by Douglas L. Jones
+* University of Illinois at Urbana-Champaign January 19, 1992
+* http://cnx.rice.edu/content/m12016/latest/
+*
+* Copyright (c) 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* This code is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 3
+* as published by the Free Software Foundation.
+*
+* This code is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this plugin; if not, write to the Free Software
+* Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 public class FFTRadix2 extends Radix2Processor {
 
     protected boolean isFrequencyDomain;
@@ -48,7 +69,7 @@ public class FFTRadix2 extends Radix2Processor {
     public FFTRadix2(ImageProcessor ip, boolean isFrequencyDomain) {
         super(ip);
         this.isFrequencyDomain = isFrequencyDomain;
-        if (this.esCuadradaP2(width, height)) {
+        if (this.isPower2(width, height)) {
             n = getWidth();
             resetRoi();
             m = 0;
@@ -256,7 +277,7 @@ public class FFTRadix2 extends Radix2Processor {
 
     }
 
-    void ifftComplex() {
+    public void ifftComplex() {
         //Aplica el conjugado y hace la trasnformada de fourier
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
@@ -285,7 +306,7 @@ public class FFTRadix2 extends Radix2Processor {
     //Para así actualizar la información propia del
     //Ip
 
-    void update() {
+    public void update() {
         int offset, i, j;
         float dt[] = (float[]) this.getPixels();
         for (i = 0; i < n; i++) {
@@ -298,17 +319,22 @@ public class FFTRadix2 extends Radix2Processor {
 
     //Función para visualizar la imagen de espectro
     //Se da en escala logaritmica
-    void espectroFFT2() {
+    public void espectroFFT2(boolean swap, boolean log) {
         int offset, i, j;
         float dt[] = (float[]) this.getPixels();
-        this.swapQuadrants();
+        if(swap)
+            this.swapQuadrants();
         for (i = 0; i < n; i++) {
             offset = i * n;
             for (j = 0; j < n; j++) {
-                dt[offset + j] = (float) (32 * Math.log(Math.sqrt(real[i][j] * real[i][j] + imag[i][j] * imag[i][j]) / n));
+                if (log)
+                    dt[offset + j] = (float) (32 * Math.log(Math.sqrt(real[i][j] * real[i][j] + imag[i][j] * imag[i][j]) / n +1));
+                else
+                    dt[offset + j] = (float) (Math.sqrt(real[i][j] * real[i][j] + imag[i][j] * imag[i][j]) / n );
             }
         }
-        this.swapQuadrants();
+        if(swap)
+            this.swapQuadrants();
     }
 
     //Genera el espectro sin estar en escala logaritmica
@@ -328,7 +354,7 @@ public class FFTRadix2 extends Radix2Processor {
 
     //Cambia cuadrantes de los arreglos de complejos y reales
 
-    void swapQuadrants() {
+    public void swapQuadrants() {
         int i, j;
         double tmp;
         int v1;

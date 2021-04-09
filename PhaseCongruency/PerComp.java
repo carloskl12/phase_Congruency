@@ -3,17 +3,35 @@ package PhaseCongruency;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 
-/*
-Esta clase implementa el filtro de descomposición de una 
-imagen en componente periódica y DC según:
-
-* Moisan, L. (2011). Periodic plus smooth image decomposition.
-  Journal of Mathematical Imaging and Vision, 39(2), 161-179.
-
-La diferencia principal a la propuesta original radica en que
-solo utiliza imágenes cuadradas que se puede procesar con 
-la FFT Radix-2
+/**
+* FilterGrid.java
+* Created on 12 December 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* This class implements the periodic plus smooth image decomposition filter 
+* according to:
+* - Moisan, L. (2011). Periodic plus smooth image decomposition.
+*   Journal of Mathematical Imaging and Vision, 39(2), 161-179.
+*
+* Copyright (c) 2019 by 
+* - Carlos Antonio Jacanamejoy-Jamioy (e-mail:carloskl12@gmail.com) 
+* - Guillermo Forero-Vargas (e-mail: mgforero@yahoo.es)
+*
+* This code is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 3
+* as published by the Free Software Foundation.
+*
+* This code is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this plugin; if not, write to the Free Software
+* Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
+
 public class PerComp extends Radix2Processor {
 
     double[][] real;
@@ -24,7 +42,7 @@ public class PerComp extends Radix2Processor {
     }
 
     public void perComp() {
-        if (this.esCuadradaP2(width, height)) {
+        if (this.isPower2(width, height)) {
             int n;//ancho y alto de la imagen
             float[] fhtdata;
             ImageProcessor ipBordes = extraeBordes(this);
