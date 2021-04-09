@@ -20,21 +20,29 @@ Para instalar el plugin se puede revisar en la ayuda de [ImageJ](https://imagejd
 
 ![interfaz](https://github.com/carloskl12/phase_Congruency/blob/master/menusPC.png)
 
-Consta de tres tipos de entradas, primero los parámetros básicos 
+Consta de cuatro tipos de parámetros, primero los parámetros generales 
 indicando entre paréntesis su valor por defecto:
  - **Scales** (4), hace referencia al 
   número de escalas utilizadas.
 
- - **Lenght edge** (3), corresponde a la ongitud en pixeles de la escala más
-  pequeña a tener en cuenta.
+ - **Edge width** (3), corresponde al doble del ancho de los bordes mas pequeños a detectar. 
+ Por definición corresponde a la longitud de la escala más pequeña a tener en cuenta.
 
- - **Mult** (2.1), factor de escala entre los filtros sucesivos.
+ - **Scale factor** (2.1), factor entre las escalas sucesivas.
 
  - **Sigma Onf** ( 0.55), define la forma de los filtros log Gabor, afectando
   directamente el ancho de banda de los mismos.
 
- - **k** ( 3) , factor de la raíz cuadrada de la varianza de la distribución Rayleigh que 
-  modela el ruido.
+El segundo tipo de parámetros está asociado a la función de cuantificación con 
+la que se estima la congruencia de fase:
+
+ - **Fucntion** (Abs), función seleccionada, puede ser valor absoluto (Abs) o una
+  función exponencial.
+ 
+ - **Alpha** , es un coeficiente que se utilizará en la función seleccionada.
+
+El tercer tipo de parámetros permite ajustar la función de ponderación según la 
+distribución de las escalas en el espectro de frecuencias:
 
  - **Cut Off** (0.5), punto de corte para penalizar la PC. Un valor de 0 implica no
   penalizar nada, y 1 corresponde a la máxima penalización debido a la
@@ -43,24 +51,28 @@ indicando entre paréntesis su valor por defecto:
  - **Gain** (10), ganancia que implica un aumento del contraste
   de la imagen resultante.
 
- - **Alpha** (1.5), sensibilidad lineal ante los cambios de fase. Un valor alto significa que 
-  se detectarán valores de congruencia de fase más altos, y se despreciará los 
-  más bajos.
+El cuarto tipo de parámetros permite ajustar el umbral de ruido en energía utilizado para 
+evitar el ruido de fase:
 
-Luego en el parámetro **Threshold** se escoge el método de estimación del umbral
-de ruido, que en caso de requerir algún valor adicional se ingresa en el campo
-**Value**. Y finalmente se indican las imágenes de salida a mostrar:
+ - **Method** (Median), método de estimación de ruido.
 
- - **PC**, imagen de congruencia de fase.
- 
- - **F**, imagen sin la componente DC.
- 
- - **H**, imagen con desfase de 90 grados, o componente imaginaria.
- 
- - **E**, imagen de energía local.
+ - **Value** ( 3) , Si el método es custom, indica directamente el umbral de energía 
+ a tener en cuenta. En los otros métodos corresponde aun parámetro utilizado como 
+ factor.
 
- - **Ph**, imagen de fase.
+
+Finalmente se indican las imágenes de salida a mostrar:
+
+ - **Phase congruency**, imagen de congruencia de fase.
  
- - **Or**, imagen de la orientación o magnitud del gradiente de la fase.
+ - **Real component**, imagen sin la componente DC.
+ 
+ - **Imaginary component**, imagen con desfase de 90 grados, o componente imaginaria.
+ 
+ - **Enegry**, imagen de energía local.
+
+ - **Phase**, imagen de fase.
+ 
+ - **Orientation**, imagen de la orientación o magnitud del gradiente de la fase.
 
 
